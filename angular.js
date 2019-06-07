@@ -1,5 +1,5 @@
 /**
- * @license AngularJS v1.2.33-local+sha.70724e391
+ * @license AngularJS v1.2.33-local+sha.60bc490ba
  * (c) 2010-2014 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -68,7 +68,7 @@ function minErr(module) {
       return match;
     });
 
-    message = message + '\nhttp://errors.angularjs.org/1.2.33-local+sha.70724e391/' +
+    message = message + '\nhttp://errors.angularjs.org/1.2.33-local+sha.60bc490ba/' +
       (module ? module + '/' : '') + code;
     for (i = 2; i < arguments.length; i++) {
       message = message + (i == 2 ? '?' : '&') + 'p' + (i-2) + '=' +
@@ -1989,7 +1989,7 @@ function setupModuleLoader(window) {
  * - `codeName` – `{string}` – Code name of the release, such as "jiggling-armfat".
  */
 var version = {
-  full: '1.2.33-local+sha.70724e391',    // all of these placeholder strings will be replaced by grunt's
+  full: '1.2.33-local+sha.60bc490ba',    // all of these placeholder strings will be replaced by grunt's
   major: 1,    // package task
   minor: 2,
   dot: 33,
@@ -5939,6 +5939,39 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         if ((nodeName === 'A' && (key === 'href' || key === 'xlinkHref')) ||
             (nodeName === 'IMG' && key === 'src')) {
           this[key] = value = $$sanitizeUri(value, key === 'src');
+        } else if (nodeName === 'img' && key === 'srcset') {
+            // sanitize img[srcset] values
+            var result = "";
+
+            // first check if there are spaces because it's not the same pattern
+            var trimmedSrcset = trim(value);
+            //                (   999x   ,|   999w   ,|   ,|,   )
+            var srcPattern = /(\s+\d+x\s*,|\s+\d+w\s*,|\s+,|,\s+)/;
+            var pattern = /\s/.test(trimmedSrcset) ? srcPattern : /(,)/;
+
+            // split srcset into tuple of uri and descriptor except for the last item
+            var rawUris = trimmedSrcset.split(pattern);
+
+            // for each tuples
+            var nbrUrisWith2parts = Math.floor(rawUris.length / 2);
+            for (var i=0; i<nbrUrisWith2parts; i++) {
+                var innerIdx = i*2;
+                // sanitize the uri
+                result += $$sanitizeUri(trim( rawUris[innerIdx]), true);
+                // add the descriptor
+                result += ( " " + trim(rawUris[innerIdx+1]));
+            }
+            // split the last item into uri and descriptor
+            var lastTuple = trim(rawUris[i*2]).split(/\s/);
+
+            // sanitize the last uri
+            result += $$sanitizeUri(trim(lastTuple[0]), true);
+
+            // and add the last descriptor if any
+            if( lastTuple.length === 2) {
+                result += (" " + trim(lastTuple[1]));
+            }
+            this[key] = value = result;
         }
 
         if (writeAttr !== false) {
